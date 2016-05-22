@@ -6,6 +6,7 @@
 package com.cassandra.graph.entity;
 
 import java.util.NoSuchElementException;
+import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Element;
 import org.apache.tinkerpop.gremlin.structure.Property;
 
@@ -14,15 +15,27 @@ import org.apache.tinkerpop.gremlin.structure.Property;
  * @author rhuneau
  */
 public class CassandraEdgeProperty implements Property<String>{
+    
+    private final String key;
+    private final String value;
+    private final Edge parent;
+
+    public CassandraEdgeProperty(Edge parent, String key, String value) {
+	this.key = key;
+	this.value = value;
+	this.parent = parent;
+    }
+    
+    
 
     @Override
     public String key() {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	return key;
     }
 
     @Override
     public String value() throws NoSuchElementException {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	return value;
     }
 
     @Override
@@ -32,7 +45,7 @@ public class CassandraEdgeProperty implements Property<String>{
 
     @Override
     public Element element() {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	return parent;
     }
 
     @Override

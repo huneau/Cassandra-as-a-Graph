@@ -12,10 +12,22 @@ import org.apache.tinkerpop.gremlin.structure.VertexProperty;
  * @author rhuneau
  */
 public class CassandraVertexProperty implements VertexProperty<String>{
+    
+    private final String key;
+    private final String value;
+    private final Vertex parent;
+
+    public CassandraVertexProperty(Vertex parent, String key, String value ) {
+	this.key = key;
+	this.value = value;
+	this.parent = parent;
+    }
+    
+    
 
     @Override
     public Vertex element() {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	return parent;
     }
 
     @Override
@@ -25,12 +37,12 @@ public class CassandraVertexProperty implements VertexProperty<String>{
 
     @Override
     public String key() {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	return key;
     }
 
     @Override
     public String value() throws NoSuchElementException {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	return value;
     }
 
     @Override

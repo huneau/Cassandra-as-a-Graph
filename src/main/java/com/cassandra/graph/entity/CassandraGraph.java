@@ -1,6 +1,10 @@
 package com.cassandra.graph.entity;
 
+import com.cassandra.graph.client.CassandraGraphClient;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import org.apache.commons.configuration.Configuration;
 import org.apache.tinkerpop.gremlin.process.computer.GraphComputer;
 import org.apache.tinkerpop.gremlin.structure.Edge;
@@ -15,6 +19,8 @@ import org.apache.tinkerpop.gremlin.structure.util.ElementHelper;
  */
 public class CassandraGraph implements Graph {
 
+    private static final CassandraGraphClient CLIENT = CassandraGraphClient.getInstance();
+
     @Override
     public Vertex addVertex(Object... keyValues) {
 	ElementHelper.legalPropertyKeyValueArray(keyValues);
@@ -23,7 +29,7 @@ public class CassandraGraph implements Graph {
 
     @Override
     public void close() throws Exception {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	CLIENT.close();
     }
 
     @Override
@@ -43,7 +49,15 @@ public class CassandraGraph implements Graph {
 
     @Override
     public Iterator<Edge> edges(Object... edgeIds) {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	if (edgeIds.length == 0) {
+	    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
+	List<Edge> edges = new ArrayList<>();
+	Arrays.asList(edgeIds).stream().forEach(id -> {
+	    CassandraVertex vertex = CLIENT.getVertex(id.toString()).get();
+	    edges.addAll(CLIENT.getEdge(vertex, CassandraGraphClient.CassandraDirection.CONNECT));
+	});
+	return edges.iterator();
     }
 
     @Override
@@ -58,8 +72,28 @@ public class CassandraGraph implements Graph {
 
     @Override
     public Iterator<Vertex> vertices(Object... vertexIds) {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	if (vertexIds.length == 0) {
+	    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	}
+	List<Vertex> vertices = new ArrayList<>();
+	Arrays.asList(vertexIds).stream().forEach(id -> vertices.add(CLIENT.getVertex(id.toString()).get()));
+	return vertices.iterator();
     }
 
-    
+    @Override
+    public Features features() {
+	return new CassandraFeatures();
+    }
+
+    /**
+     * Reason :
+     * {@link GraphFactory#open(org.apache.commons.configuration.Configuration)}
+     *
+     * @param c
+     * @return
+     */
+    public static Graph open(Configuration c) {
+	return new CassandraGraph();
+    }
+
 }

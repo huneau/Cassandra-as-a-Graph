@@ -1,5 +1,7 @@
 package com.cassandra.graph.entity;
 
+import com.cassandra.graph.client.CassandraGraphClient;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -10,6 +12,7 @@ import org.apache.tinkerpop.gremlin.structure.Edge;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.structure.util.ElementHelper;
 
 /**
  *
@@ -17,21 +20,26 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
  */
 public class CassandraEdge implements Edge {
 
-    private final Vertex vertex, vertexOut;
-
+    private final Vertex fromVertex, toVertex;
+    private final Map<String, Object> properties;
     private final String label;
-    
-    
 
-    public CassandraEdge(Vertex vertexIn, Vertex vertexOut, String label) {
-	this.vertex = vertexIn;
-	this.vertexOut = vertexOut;
+    private static final CassandraGraphClient CLIENT = CassandraGraphClient.getInstance();
+
+    public CassandraEdge(Vertex fromVertex, Vertex toVertex, String label, Map<String, Object> asMap) {
+	CLIENT.createEdge(fromVertex.id().toString(), label, toVertex.id().toString(), asMap);
+	this.properties = asMap;
 	this.label = label;
-
+	this.fromVertex = fromVertex;
+	this.toVertex = toVertex;
     }
 
-    public CassandraEdge(Vertex vertexIn, Vertex vertexOut, String label, Map<String, Object> asMap) {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public CassandraEdge(Vertex from, String to, String label, Map<String, Object> asMap) {
+	CLIENT.getEdge((CassandraVertex) from, CassandraGraphClient.CassandraDirection.CONNECT, label, to);
+	this.fromVertex = from;
+	this.toVertex = CLIENT.getVertex(to).get();
+	this.label = label;
+	this.properties = asMap;
     }
 
     @Override
@@ -39,13 +47,13 @@ public class CassandraEdge implements Edge {
 	List<Vertex> vertices = Collections.EMPTY_LIST;
 	switch (direction) {
 	    case BOTH:
-		vertices = Arrays.asList(vertexOut, vertex);
+		vertices = Arrays.asList(toVertex, fromVertex);
 		break;
 	    case IN:
-		vertices = Arrays.asList(vertex);
+		vertices = Arrays.asList(fromVertex);
 		break;
 	    case OUT:
-		vertices = Arrays.asList(vertexOut);
+		vertices = Arrays.asList(toVertex);
 		break;
 	}
 	return vertices.iterator();
@@ -53,12 +61,25 @@ public class CassandraEdge implements Edge {
 
     @Override
     public <V> Iterator<Property<V>> properties(String... propertyKeys) {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	List<Property<V>> edgeProperties = new ArrayList<>();
+	if (propertyKeys.length == 0) {
+	    properties.entrySet().forEach(entry -> {
+		edgeProperties.add((Property<V>) new CassandraEdgeProperty(this, entry.getKey(), (String) entry.getValue()));
+	    });
+	} else {
+	    Arrays.asList(propertyKeys).stream().forEach(key -> {
+		if (properties.containsKey(key)) {
+		    CassandraEdgeProperty property = new CassandraEdgeProperty(this, key, label);
+		    edgeProperties.add((Property<V>) property);
+		}
+	    });
+	}
+	return edgeProperties.iterator();
     }
 
     @Override
     public Object id() {
-	return vertex.id();
+	return fromVertex.id();
     }
 
     @Override
@@ -73,12 +94,23 @@ public class CassandraEdge implements Edge {
 
     @Override
     public <V> Property<V> property(String key, V value) {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	ElementHelper.validateProperty(key, value);
+	properties.put(key, value);
+	CLIENT.addEdgeProperty(this, key, value);
+	return (Property<V>) new CassandraEdgeProperty(this, key, (String) value);
     }
 
     @Override
     public void remove() {
-	throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+	CLIENT.deleteEdge(this);
+    }
+
+    public Vertex from() {
+	return fromVertex;
+    }
+
+    public Vertex to() {
+	return fromVertex;
     }
 
 }
